@@ -11,7 +11,7 @@
 #define BATCHMODE 0
 #define INTERACTIVEMODE 1
 
-
+//THIS IS A TEST COMMENT FOR GITHUB REPO DELETE THISSS YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////////////////////////////////////////////////////////////////////////////////////
 //design notes:
 //dealing with bad syntax, e.g., foo < < bar
 //-> print an error message and skip to the next newline
