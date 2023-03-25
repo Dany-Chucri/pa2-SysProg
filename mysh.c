@@ -11,61 +11,10 @@
 #define BATCHMODE 0
 #define INTERACTIVEMODE 1
 
-//THIS IS A TEST COMMENT FOR GITHUB REPO DELETE THISSS YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///////////////////////////////////////////////////////////////////////////////////////
+
 //design notes:
 //dealing with bad syntax, e.g., foo < < bar
 //-> print an error message and skip to the next newline
-/*int tokenize(char* buf, char** tokens) {
-    char* ptr;
-    const char delim = 32; //ASCII for white space
-    int tokptr1 = 0; int tokptr2 = 0; //tokptr1 for traversing token array, tokptr2 for traversing characters in each token
-    if(buf != NULL) {
-        ptr = buf;
-    }
-    else {
-        printf("*ERROR*");
-    }
-
-    while (*(ptr+1) != '\0') { //ptr goes until buffer runs out of bytes to tokenize
-        printf("ptr is now at %c\n", *ptr);
-        if (*ptr != delim) { //if ptr is at a char that isn't white space
-            if (*ptr == '|' || *ptr == '<' || *ptr == '>') { // | < > are their own tokens
-                if (tokptr1 == 0) return 1; //check for first token, which cannot be a redirection or pipe
-                else if ((tokens[tokptr1-1][0] == '|' || tokens[tokptr1-1][0] == '<' || tokens[tokptr1-1][0] == '>')) { //repeat token check
-                    return 1;  
-                }
-                tokens[tokptr1][tokptr2] = *ptr; 
-                tokptr2++; //increments tokptr2 so that we can set a null terminator
-                tokens[tokptr1][tokptr2] = '\0';
-                ptr++;
-                tokptr1++;
-                printf("tokptr1 has incremented to %d due to a special token\n", tokptr1);
-                tokptr2 = 0;
-            }
-            else { //regular tokens
-                tokens[tokptr1][tokptr2] = *ptr; //tokptr1 refers to which string in the tokens array it is, tokptr2 refers to which character in each string, essentially we are filling up each string with characters
-                tokptr2++; //increments tokptr2 so that it can be used to take in the next character for this string
-                ptr++;
-                if (*ptr == delim || *ptr == '\0') {
-                    tokens[tokptr1][tokptr2] = '\0';
-                    tokptr1++;
-                    printf("tokptr1 has incremented to %d due to a normal token, and ptr is now at %c\n", tokptr1, *ptr);
-                    
-                    tokptr2 = 0;
-                }
-            }
-        }
-        else { //if ptr is at a white space
-            while (*ptr == delim) { //increments the buffer pointer until the next non-whitespace char, this solves the case where there are consecutive white spaces
-                ptr++;
-            }
-        }
-    }
-    printf("%d\n", tokptr1);
-    if (tokens[tokptr1-1][0] == '|' || tokens[tokptr1-1][0] == '>' || tokens[tokptr1-1][0] == '<') return 1; //check for last token, which cannot be a redirection or pipe
-    return 0; 
-
-}*/
 
 int tokenize(char* buf, char** tokens) {
     char* ptr;
@@ -98,7 +47,7 @@ int tokenize(char* buf, char** tokens) {
     if (firstVal == '|' || firstVal == '<' || firstVal == '>') return 1;
 
     while (*ptr != '\0') {
-        printf("token at %d ptr at %c\n", tokptr1, *ptr);
+        //printf("token at %d ptr at %c\n", tokptr1, *ptr);
         if (*ptr != delim) {
             if (*ptr == '|' || *ptr == '<' || *ptr == '>') {         
                 if (tokptr1 > 0) {
@@ -173,10 +122,10 @@ int main(int argc, char** argv) {
     while ((bytes = read(sfd, buf, BUFSIZE)) > 0) { //reading in input from stream and writing it to buf
         if(mode == INTERACTIVEMODE) {
 
-            for (int i = 0; i < bytes; i++) {
+            /*for (int i = 0; i < bytes; i++) {
                 printf("%c", buf[i]);
             }
-            
+            */
             char** tokens = malloc(sizeof(char*) * bytes);
             memset(tokens, (char) 0, bytes);
             for (int i = 0; i < bytes; i++) {
@@ -186,7 +135,7 @@ int main(int argc, char** argv) {
 
             int valid = tokenize(buf, tokens); //parse command input inside buffer as an array of tokens
             if (valid == 1) { //check for valid command syntax
-                printf("Inappropriate command syntax!\n");
+                perror("Inappropriate command syntax!\n");
                 memset(buf, (char) 0, BUFSIZE); //fake flush the buffer
                 for (int i = 0; i < bytes; i++) {
                     free(tokens[i]);
@@ -198,24 +147,61 @@ int main(int argc, char** argv) {
             }
             
             //TOKEN PRINT TESTING
-            int looper = 0; 
+            /*int looper = 0; 
             while (strcmp(tokens[looper], "") != 0) {
                 printf("%s\n", tokens[looper]);
                 looper++;
-            }
-/*
+            }*/
+
+            int shellExit = 0; //tracker for exit command
+
             //begin interpretation of tokens and execution of commands
-            char* tokenptr = tokens[0]; //for traversal through tokens
-            while (tokenptr != NULL) {
-                if (strcmp(tokenptr, "cd") == 0) { //execute cd command
-                    
+            char** tokenptr = tokens; //for traversal through tokens
+            while (strcmp(*tokenptr, "") != 0) {
+                if (strcmp(*tokenptr, "cd") == 0) { //execute cd command
+                    if (strcmp(*tokenptr, tokens[0]) != 0) { //cd must be the first token in a command according to our implementation
+                        perror("Inappropriate command! \"cd\" must be at the start of a command.\n");
+                        break;
+                    }
+                    ++tokenptr;
+                    //printf("the tokenptr is now at %s\n", *tokenptr);
+                    if (strcmp(*tokenptr, "") == 0) //no arguments given, change to home directory
+                    {
+                        char* homeDir = getenv("HOME");
+                        int success = chdir(homeDir);
+                        if (success == -1) { //check if failed
+                            perror("");
+                        }
+                        else printf("Succesfully changed to home directory, THIS IS ONLY FOR TESTING REMEMBER TO DELETE THIS\n");
+                        break;
+                    }
+                    else {
+                        int success = chdir(*tokenptr);
+                        if (success == -1) { //check if failed
+                            perror("");
+                        }
+                        else printf("Succesfully changed to specified directory, THIS IS ONLY FOR TESTING REMEMBER TO DELETE THIS\n");
+                        break;
+                    }
                 }
-                else if (strcmp(tokenptr, "pwd") == 0) { //execute pwd command
-                    
+                else if (strcmp(*tokenptr, "pwd") == 0) { //execute pwd command
+                    if (strcmp(*tokenptr, tokens[0]) != 0) { //pwd must be the first token in a command according to our implementation, but its output can be piped/redirected
+                        perror("Inappropriate command! \"pwd\" must be at the start of a command.\n");
+                        break;
+                    }
+                    char buffer[1000];
+                    memset(buffer, (char) 0, 1000); 
+                    char* pathName = getcwd(buffer, 1000);
+                    //check for redirection or piping first///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    printf("%s\n", pathName);
+                    ++tokenptr;
                 }
-                else { //first check if the first token contains a /, indicating a path name to an executable program
+                else if (strcmp(*tokenptr, "exit") == 0) { //execute exit command
+                    shellExit = 1;
+                } 
+                /*else { //first check if the first token contains a /, indicating a path name to an executable program
                     int j = 0;
-                    char slash = tokenptr[0];
+                    char slash = *tokenptr[0];
                     int pathFound = 0;
                     while (slash != NULL) {
                         if (slash == '/') {
@@ -223,7 +209,7 @@ int main(int argc, char** argv) {
                             break;
                         }
                         j++;
-                        slash = tokenptr[j];
+                        slash = *tokenptr[j];
                     }
                     if (slash == '/') { //now execute program at pathname 
 
@@ -232,8 +218,10 @@ int main(int argc, char** argv) {
                         
                     }
                 }
+                */
+               ++tokenptr;
             }
-*/
+
             memset(buf, 0, BUFSIZE); //fake flush the buffer
             for (int i = 0; i < bytes; i++) {
                 free(tokens[i]);
@@ -241,9 +229,11 @@ int main(int argc, char** argv) {
             free(tokens);
             printf("mysh> ");
             fflush(stdout); //be ready to change this to a different output if needed?/////////////////////////////////////////
+            if (shellExit == 1) { //check if we need to exit
+                printf("exiting\n");
+                break;
+            }
         }
-
     }
-
     return EXIT_SUCCESS;
 }
