@@ -102,51 +102,75 @@ int tokenize(char* buf, char** tokens) {
     return 0;
 }
 
-void wildcards(char** tokens) { //returns the pathnames of files that are included in the wildcard
+void wildcards(char** tokens, int tokenindex) { //returns the pathnames of files that are included in the wildcard
     char** globs;
     glob_t gstruct;
-    int r = glob(tokens[0], GLOB_ERR, NULL, &gstruct); 
+    int r = glob(tokens[tokenindex], GLOB_ERR, NULL, &gstruct); 
+//int rando = 0;
 
-    if(r != 0) { //error check
+    if (r > 3) {//(r != 0 && r != 1) { //error check
         if(r == GLOB_NOMATCH) 
             fprintf(stderr, "No glob matches\n");
         else
             fprintf(stderr, "Glob Error");
-        exit(1);
+        //exit(0);
+    }
+  
+    printf("Number of found filenames for %s: %zu\n", tokens[tokenindex], gstruct.gl_pathc);
+    if (gstruct.gl_pathc > 0) {
+        globs = gstruct.gl_pathv;
+        while(*globs) {
+            printf("%s\n", *globs);
+            globs++;
+        }
     }
     
-    printf("Number of found filenames: %zu\n", gstruct.gl_pathc);
-    globs = gstruct.gl_pathv;
-    while(*globs) {
-        printf("%s\n", *globs);
-        globs++;
+
+}
+
+int largestString (char** strings) {
+    int iter = 0;
+    int largest = 0;
+    while (strcmp(strings[iter], "") != 0) {
+        if (strlen(strings[iter]) > largest) largest = strlen(strings[iter]);
+        iter++;
+    } 
+    return largest;   
+}
+int numberOfTokens(char** tokens) {
+    //char** ptr = tokens;
+    int num = 0;
+    int iter = 0; 
+    while (strcmp(tokens[iter], "") != 0) {
+        //printf("%s %d\n", tokens[iter], num);
+        iter++;
+        num++;
     }
 
+    return num;
+}
+void concatTokenGlobs(char** tokens, char** globs, int globIndex) { //use gl_pathv for glob struct
+    int numTokens = numberOfTokens(tokens);
+    int numGlobs = numberOfTokens(globs);
+    int newSize = largestString(tokens);
+    if(largestString(globs) > newSize) newSize = largestString(globs);
+    newSize++; // for the \0
 
-    /*
-    char buf[1000];
-    memset(buf, (char) 0, 1000); 
-    char* pathName = getcwd(buf, 1000);
-    DIR* dir = opendir(getcwd(buf, 0));
-    
 
-    
-    //int ptrIndex = 0;
-    int asteriskIndex = 0;
+    tokens = realloc(tokens, sizeof(char*) * (numTokens+numGlobs-1));
+    //int iter = 0;
+    for (int i = 0; i < (numTokens+numGlobs-1); i++) {
+        tokens[i] = realloc(tokens[i], sizeof(char) * newSize); //reallocate space for new token lengths, must realloc entire array to avoid pointers crossing into wrong regions
+    }
+    //numTokens = numberOfTokens(tokens);
 
-    while(token[asteriskIndex] != '*') {   //Finds where the * char is
-        //ptrIndex++;
-        asteriskIndex++;
+    for(int i = (numTokens+numGlobs-1) - 1; i > globIndex; i--) {
+        tokens[i] = tokens[i-1];
     }
 
-    int ptrIndex = 0;
-
-
     
-    while(token[ptrIndex]) {
 
-    }
-*/
+
 }
 
 /*
@@ -264,14 +288,14 @@ int main(int argc, char** argv) {
                 fflush(stdout); //be ready to change this to a different output if needed?/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 continue;
             }
-
+            //printf("%ld\n", sizeof(tokens));
             //TOKEN PRINT TESTING 1
             /*int looper1 = 0; 
             while (strcmp(tokens[looper1], "") != 0) {
                 printf("%s\n", tokens[looper1]);
                 looper1++;
-            }*/
-
+            }
+            */
             //look for home directory or wildcard replacement in the tokens first
             int looper = 0; 
             while (strcmp(tokens[looper], "") != 0) {
@@ -359,7 +383,8 @@ int main(int argc, char** argv) {
                 else if (strcmp(*tokenptr, "exit") == 0) { //execute exit command
                     shellExit = 1;
                     ++tokenptr;
-                } 
+                }
+                 /*
                 else { //first check if the first token contains a /, indicating a path name to an executable program
                     int j = 0;
                     char slash = tokens[0][0];
@@ -394,11 +419,20 @@ int main(int argc, char** argv) {
                         }
                     }
                 }
+                */
                 
                ++tokenptr; //TEMPORARY INCREMENT, DONT FORGET TO REMOVE////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             }
-
+    int num = numberOfTokens(tokens);
+    printf("\nNumber of Tokens: %d\n", num);
+    for(int i = 0; i < num; i++) {
+        if(strcmp(tokens[i], "") != 0) {
+            wildcards(tokens, i);
+        }
+    }
+    //printf(size);
             memset(buf, 0, BUFSIZE); //fake flush the buffer
+
             for (int i = 0; i < bytes; i++) {
                 free(tokens[i]);
             }
