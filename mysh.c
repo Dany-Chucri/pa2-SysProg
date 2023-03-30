@@ -102,11 +102,120 @@ int tokenize(char* buf, char** tokens) {
     return 0;
 }
 
-void wildcards(char** tokens, int tokenindex) { //returns the pathnames of files that are included in the wildcard
-    char** globs;
+int indexOfChar(char* string, char c) {
+    char* p = string;
+    for(int i = 0; i < strlen(string); i++) {
+        if(p[i] == c) return i;
+    }
+
+    return -1;
+}
+
+int largestString (char** strings) { //returns length of largest string in a string array
+    char** ptr = strings;
+    int largest = 0;
+    while (strcmp(*ptr, "") != 0) {
+        //printf("%s\n", *ptr);
+        if (strlen(*ptr) > largest) largest = strlen(*ptr);
+        ++ptr;
+        //printf("%d\n",iter);
+    } 
+    largest++; //for the \0
+    return largest;   
+}
+
+int numberOfTokens(char** tokens) {
+    int num = 0;
+    char** ptr = tokens;
+    while (strcmp(*ptr, "") != 0) {
+        //printf("%s\n", *ptr);
+        num++;
+        ++ptr;
+        //printf("%d\n",iter);
+    } 
+    return num;
+}
+
+
+void personalStrCpy(char* destination, char* source, int sourceLength) {
+    for(int i = 0; i < sourceLength; i++) {
+        destination[i] = source[i];
+    }
+}
+
+int concatTokenGlobs(char** tokens, char** globs, int globIndex) { //use gl_pathv for glob struct //returns size of new tokens array
+//printf("we are in concatglobs\n");
+    int numTokens = numberOfTokens(tokens);
+    int numGlobs = numberOfTokens(globs);
+    int newSize = largestString(tokens);
+    if(largestString(globs) > newSize) newSize = largestString(globs);
+    newSize++; // for the \0
+
+
+    //tokens = realloc(tokens, sizeof(char*) * (numTokens+numGlobs)); //-1 because we need to replace the wildcard
+    //for (int i = 0; i < (numTokens+numGlobs-1); i++) {
+        //printf("%p\n", tokens[i]);
+        //tokens[i] = realloc(tokens[i], sizeof(char) * newSize); //reallocate space for new token lengths, must realloc entire array to avoid pointers crossing into wrong regions
+        //printf("%p\n", tokens[i]);
+    //}
+    /*
+    int looper1 = 0; 
+            while (strcmp(tokens[looper1], "") != 0) {
+                printf("%s\n", tokens[looper1]);
+                looper1++;
+            }
+    */
+    //printf("we are at check 1\n");
+    //numTokens = numberOfTokens(tokens);
+    tokens[numTokens+numGlobs-1] =  "";
+    for(int i = (numTokens+numGlobs-1-1); i > globIndex; i--) { //had a -1 in first condition
+        //printf("%s\n", tokens[i - numGlobs+1]);
+        strcpy(tokens[i], tokens[i - numGlobs+1]); //tokens[i] = tokens[i - numGlobs+1];//tokens[i-1];    personalStrCpy(tokens[i], tokens[i - numGlobs+1], newSize); //  
+    }
+/*
+    for (int i = 0; i < numGlobs; i++) {
+        printf("%s ", globs[i]);
+    }
+        printf("\n");
+       */ //printf("GLOBIND:%d\n", globIndex);
+    int i = globIndex;
+    int j = 0;
+/*
+    for (int i = 0; i < (numTokens+numGlobs); i++) {        
+        printf("%s ", tokens[i]);
+    }
+*/
+//printf("\n");printf("\n");
+
+//printf("%p\n%p\n", tokens[i], tokens[i+1]);
+
+    while(i < globIndex + numGlobs) {
+        strcpy(tokens[i], globs[j]);//personalStrCpy(tokens[i], globs[j], strlen(globs[j]));//strcpy(tokens[i], globs[j]);
+        j++;   
+        i++;  
+    }
+/*
+    for (int i = 0; i < (numTokens+numGlobs); i++) {
+        printf("%s ", tokens[i]);
+    }
+        printf("\n");
+*/
+    /*
+    int looper2 = 0; 
+    while (strcmp(tokens[looper2], "") != 0) {
+        printf("%s\n", tokens[looper2]);
+        looper2++;
+    }
+    */
+   //printf("%p\n", tokens[0]);
+   return (numTokens+numGlobs-1);
+}
+
+int wildcards(char** tokens, int tokenindex) { //returns the pathnames of files that are included in the wildcard
+    //char** globs;
+    int num = 0;
     glob_t gstruct;
     int r = glob(tokens[tokenindex], GLOB_ERR, NULL, &gstruct); 
-//int rando = 0;
 
     if (r > 3) {//(r != 0 && r != 1) { //error check
         if(r == GLOB_NOMATCH) 
@@ -116,61 +225,44 @@ void wildcards(char** tokens, int tokenindex) { //returns the pathnames of files
         //exit(0);
     }
   
-    printf("Number of found filenames for %s: %zu\n", tokens[tokenindex], gstruct.gl_pathc);
+    //printf("Number of found filenames for %s: %zu\n", tokens[tokenindex], gstruct.gl_pathc);
+    //printf("%s\n", gstruct.gl_pathv[2]);
     if (gstruct.gl_pathc > 0) {
-        globs = gstruct.gl_pathv;
-        while(*globs) {
-            printf("%s\n", *globs);
-            globs++;
+        char** globs = malloc(sizeof(char*) * (gstruct.gl_pathc+1));
+        memset(globs, (char) 0, (gstruct.gl_pathc+1));
+        gstruct.gl_pathv[gstruct.gl_pathc] =  "";
+        //largestString(gstruct.gl_pathv);
+        for(int i = 0; i < gstruct.gl_pathc+1; i++) {
+            globs[i] = malloc(sizeof(char) * largestString(gstruct.gl_pathv));
+            memset(globs[i], (char) 0, largestString(gstruct.gl_pathv));
+            strcpy(globs[i], gstruct.gl_pathv[i]);
         }
+        //globs = gstruct.gl_pathv;
+        globs[gstruct.gl_pathc] =  "";
+        /*char** globsPtr = globs;
+        while(*globsPtr) {
+            printf("%s\n", *globsPtr);
+            globsPtr++;
+        }
+    */
+
+    /*
+        for(int i = 0; i < gstruct.gl_pathc; i++) {
+            printf("%s\n", globs[i]);
+        }
+    */
+
+        num = concatTokenGlobs(tokens, globs, tokenindex);//indexOfChar(tokens[tokenindex], '*'));
+        
+        
+        for(int i = 0; i < gstruct.gl_pathc; i++) {
+            free(globs[i]);
+        }
+        free(globs);
+        globfree(&gstruct);
+
     }
-    
-
-}
-
-int largestString (char** strings) {
-    int iter = 0;
-    int largest = 0;
-    while (strcmp(strings[iter], "") != 0) {
-        if (strlen(strings[iter]) > largest) largest = strlen(strings[iter]);
-        iter++;
-    } 
-    return largest;   
-}
-int numberOfTokens(char** tokens) {
-    //char** ptr = tokens;
-    int num = 0;
-    int iter = 0; 
-    while (strcmp(tokens[iter], "") != 0) {
-        //printf("%s %d\n", tokens[iter], num);
-        iter++;
-        num++;
-    }
-
-    return num;
-}
-void concatTokenGlobs(char** tokens, char** globs, int globIndex) { //use gl_pathv for glob struct
-    int numTokens = numberOfTokens(tokens);
-    int numGlobs = numberOfTokens(globs);
-    int newSize = largestString(tokens);
-    if(largestString(globs) > newSize) newSize = largestString(globs);
-    newSize++; // for the \0
-
-
-    tokens = realloc(tokens, sizeof(char*) * (numTokens+numGlobs-1));
-    //int iter = 0;
-    for (int i = 0; i < (numTokens+numGlobs-1); i++) {
-        tokens[i] = realloc(tokens[i], sizeof(char) * newSize); //reallocate space for new token lengths, must realloc entire array to avoid pointers crossing into wrong regions
-    }
-    //numTokens = numberOfTokens(tokens);
-
-    for(int i = (numTokens+numGlobs-1) - 1; i > globIndex; i--) {
-        tokens[i] = tokens[i-1];
-    }
-
-    
-
-
+    return num; 
 }
 
 /*
@@ -288,6 +380,7 @@ int main(int argc, char** argv) {
                 fflush(stdout); //be ready to change this to a different output if needed?/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 continue;
             }
+
             //printf("%ld\n", sizeof(tokens));
             //TOKEN PRINT TESTING 1
             /*int looper1 = 0; 
@@ -296,6 +389,7 @@ int main(int argc, char** argv) {
                 looper1++;
             }
             */
+           //printf("%d %d\n", numberOfTokens(tokens), largestString(tokens));
             //look for home directory or wildcard replacement in the tokens first
             int looper = 0; 
             while (strcmp(tokens[looper], "") != 0) {
@@ -309,7 +403,10 @@ int main(int argc, char** argv) {
                     char* newPath = strcat(home, path);
                     int space = (strlen(home) + strlen(path) + 1);
                     for (int i = 0; i < bytes; i++) {
+                                //printf("%p\n", tokens[i]);
                         tokens[looper] = realloc(tokens[looper], sizeof(char) * (bytes + space)); //reallocate space for new token lengths, must realloc entire array to avoid pointers crossing into wrong regions
+                                //printf("%p\n", tokens[i]);
+
                     }
                     int i = 0;
                     for (i = 0; i < strlen(newPath); i++) { //place new path name as a part token
@@ -321,17 +418,40 @@ int main(int argc, char** argv) {
                     //printf("\n");
                 }
                 //now look for * in tokens for wildcard replacement
-
+                    //int num = numberOfTokens(tokens);
+                    //printf("\nNumber of Tokens: %d\n", num);
+                    //for(int i = 0; i < num; i++) {
+                        //if(strcmp(tokens[i], "") != 0) {
+                        //}
+                    //}
                 looper++; 
             }
-            
-            //TOKEN PRINT TESTING 2
-            /*int looper2 = 0; 
-            while (strcmp(tokens[looper2], "") != 0) {
-                printf("%s\n", tokens[looper2]);
-                looper2++;
+    //printf("%p      %p\n", tokens, tokens[0]);
+    tokens = &tokens[0];
+    //printf("%p      %p\n", tokens, tokens[0]);
+            for(int i = 0; i < bytes; i++) {
+                //printf("%p      %p\n", tokens, tokens[0]);
+                if(indexOfChar(tokens[i], '*') != -1) {
+                    bytes = wildcards(tokens, i);
+                    break;
+                }
+                //printf("%p\n", tokens);//printf("%p      %p\n", tokens, tokens[0]);
+            }
+    //printf("%p\n", tokens[0]);
+
+            //printf("%d\n", bytes);
+
+            /*for(int i = 0; i < bytes; i++) {
+                printf("%s\n", tokens[i]);
             }*/
 
+            //TOKEN PRINT TESTING 2
+            int looper2 = 0; 
+            while (strcmp(tokens[looper2], "") != 0) {
+                printf("%s ", tokens[looper2]);
+                looper2++;
+            }
+            printf("\n");
             int shellExit = 0; //tracker for exit command
 
             //begin interpretation of tokens and execution of commands
@@ -423,13 +543,7 @@ int main(int argc, char** argv) {
                 
                ++tokenptr; //TEMPORARY INCREMENT, DONT FORGET TO REMOVE////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             }
-    int num = numberOfTokens(tokens);
-    printf("\nNumber of Tokens: %d\n", num);
-    for(int i = 0; i < num; i++) {
-        if(strcmp(tokens[i], "") != 0) {
-            wildcards(tokens, i);
-        }
-    }
+
     //printf(size);
             memset(buf, 0, BUFSIZE); //fake flush the buffer
 
