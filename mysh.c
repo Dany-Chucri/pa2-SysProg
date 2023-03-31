@@ -608,8 +608,7 @@ int main(int argc, char** argv) {
             }
 
             strcpy(args1[0], pathName);
-            //args1[maxArgs] = (char*) NULL;
-            strcpy(args1[maxArgs], "(char*) NULL)";
+            args1[maxArgs] = (char*) NULL;
             tokenptr++;
             
 
@@ -681,10 +680,6 @@ int main(int argc, char** argv) {
                 close(oldoutfd);
             }
 
-            //char buffer[1000];
-            //memset(buffer, (char) 0, 1000); 
-            //char* cwdName = getcwd(buffer, 1000);
-
             if (childStatus == 1) { //failed to execute
                 printf("Program %s could not be executed\n", pathName);
                 tempstatus = 1;
@@ -692,7 +687,8 @@ int main(int argc, char** argv) {
             //else printf("program %s should have been executed\n", pathName);
 
             //args1[maxArgs] = "";
-            strcpy(args1[maxArgs], "");
+            //args1[maxArgs] = realloc(args1[maxArgs], (largestToken + maxSize) * sizeof(char));
+            //strcpy(args1[maxArgs], "");
             /*for (int i = 0; i < largestToken + maxSize-1; i++) {
                 args1[maxArgs][i] = '0';
             }*/
@@ -708,8 +704,6 @@ int main(int argc, char** argv) {
             }
         }
         
-        //++tokenptr; //TEMPORARY INCREMENT, DONT FORGET TO REMOVE////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
         memset(buf, 0, BUFSIZE); //fake flush the buffer
         for (int i = 0; i < bytes; i++) {
             free(tokens[i]);
