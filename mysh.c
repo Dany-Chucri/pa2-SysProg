@@ -124,6 +124,17 @@ int numberOfTokens(char** tokens) {
     return num;
 }
 
+int numberOfArgs(char** tokens) {
+    int num = 0;
+    char** ptr = tokens;
+    while (strcmp(*ptr, "") != 0) {
+        if (strcmp(*ptr, "<") == 0 || strcmp(*ptr, ">") == 0 || strcmp(*ptr, "|") == 0) break;
+        num++;
+        ++ptr;
+    } 
+    return num;
+}
+
 int indexOfChar(char* string, char c) {
     char* p = string;
     for(int i = 0; i < strlen(string); i++) {
@@ -583,33 +594,54 @@ int main(int argc, char** argv) {
             }
 
             // get arguments for pathName command to execute
-            int maxArgs = numberOfTokens(tokens);
+            int maxArgs = numberOfArgs(tokens);
+            printf("%d\n", maxArgs);
             int largestToken = largestString(tokens);
-            
-
-            char** args1 = calloc(maxArgs+1, sizeof(char*));
-            for (int i = 0; i < maxArgs+1; i++) {
-                args1[i] = calloc(largestToken, sizeof(char));
-            }
-
-            //args1[0] = pathName;
             int maxSize = strlen(pathName) + 1;
+
+            char** args1 = malloc((maxArgs+1) * sizeof(char*));
+            memset(args1, 0, maxArgs+1);
             for (int i = 0; i < maxArgs+1; i++) {
-                args1[i] = realloc(args1[i], largestToken + maxSize);
+                args1[i] = malloc(largestToken + maxSize * sizeof(char));
+                memset(args1[i], 0, largestToken+maxSize);
+
             }
+
             strcpy(args1[0], pathName);
+            //args1[maxArgs] = (char*) NULL;
+            strcpy(args1[maxArgs], "(char*) NULL)";
             tokenptr++;
-            //printf("%s\n", args1[0]);
             
 
             int oldinfd = -1;
             int oldoutfd = -1;
-            for (int i = 1; i < maxArgs; i++) {
+            for (int i = 1; i < maxArgs+1; i++) {
                 if (strcmp(*tokenptr, "") != 0) {
                     if (strcmp(*tokenptr, "<") == 0) {
                         ++tokenptr;
                         oldinfd = redirectionIn(*tokenptr);
                         ++tokenptr;
+                        while (strcmp(*tokenptr, "") != 0) {
+                            if (strcmp(*tokenptr, "<") == 0) {
+                                ++tokenptr;
+                                printf("Cannot have multiple input redirections\n");
+                                break;
+                            }
+                            else if (strcmp(*tokenptr, ">") == 0) {
+                                ++tokenptr;
+                                oldoutfd = redirectionOut(*tokenptr);
+                                ++tokenptr;
+                            }
+                            /*else if (strcmp(*tokenptr, "|") == 0) {
+                                
+                            }*/
+                            else {
+                                //printf("THIS IS RIGHT BEFORE THE STRING COPY\n");
+                                strcpy(args1[i], *tokenptr);
+                                //printf("%s\n", args1[i]);
+                                ++tokenptr;
+                            }
+                        }
                     }
                     else if (strcmp(*tokenptr, ">") == 0) {
                         ++tokenptr;
@@ -617,32 +649,27 @@ int main(int argc, char** argv) {
                         ++tokenptr;
                     }
                     /*else if (strcmp(*tokenptr, "|") == 0) {
-                        
+                        //check exit in pipe
                     }*/
-                    else if (strcmp(*tokenptr, "exit") == 0) { //mark exit status
-                        shellExit = 1;
-                        ++tokenptr;
-                    } 
                     else {
                         //printf("THIS IS RIGHT BEFORE THE STRING COPY\n");
-                        strcpy(args1[i], *tokenptr);
+                        if (strcmp(*tokenptr, "") != 0) strcpy(args1[i], *tokenptr);
                         //printf("%s\n", args1[i]);
                         ++tokenptr;
                     }
                     
                 }
-                else break;
+                //else args1[i] = (char*) NULL;
             }
+            
 
-            /*char** argsptr = args1;
-            while (strcmp(*argsptr, "")) {
-                printf("%s\n", *argsptr);
-                argsptr++;
-            }*/
+            
+            for (int i = 0; i < maxArgs; i++) {
+                printf("Arg1 pointer is %s\n", args1[i]);
+            }
 
             int childStatus = executeProgram(pathName, args1);
 
-//printf("%d\n", oldinfd);
             if (oldinfd != -1) {
                 
                 dup2(oldinfd, 0);
@@ -664,18 +691,21 @@ int main(int argc, char** argv) {
             }
             //else printf("program %s should have been executed\n", pathName);
 
-            //int freed = 0;
-            if (slash != '/' && strcmp(pathName, "") != 0) {
-                free(pathName);
-                //freed = 1;
-            }
-
-
+            //args1[maxArgs] = "";
+            strcpy(args1[maxArgs], "");
+            /*for (int i = 0; i < largestToken + maxSize-1; i++) {
+                args1[maxArgs][i] = '0';
+            }*/
+            //args1[maxArgs][largestToken + maxSize-1] = '\0';
             for (int i = 0; i < maxArgs + 1; i++) {
-                //printf("We are freeing args1[%d]\n", i);
+                printf("We are freeing args1[%d], which contains %s\n", i, args1[i]);
                 free(args1[i]);
             }
             free(args1);
+
+            if (slash != '/' && strcmp(pathName, "") != 0) {
+                free(pathName);
+            }
         }
         
         //++tokenptr; //TEMPORARY INCREMENT, DONT FORGET TO REMOVE////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
