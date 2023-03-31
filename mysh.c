@@ -320,14 +320,14 @@ int executeProgram(char* pathName, char** args) {
         //printf("we will now execute\n");
         execv(pathName, args);
         perror("");
-        printf("this should never print unless something goes wrong with execv\n");
-        exit(EXIT_FAILURE); //error check
+        //printf("this should never print unless something goes wrong with execv\n");
+        return EXIT_FAILURE; //error check
     }
     //checking status of child process
     int waitStatus;
     wait(&waitStatus);   
-    if (WIFEXITED(waitStatus)) return 0; //wait error check
-    else return 1;
+    if (WIFEXITED(waitStatus)) return EXIT_SUCCESS; //wait error check
+    else return EXIT_FAILURE;
 }
 
 char* searchName(char** tokenptr) { //searches for a given file name in 1 of 6 directories
@@ -593,33 +593,36 @@ int main(int argc, char** argv) {
                 }
             }
 
-            // get arguments for pathName command to execute
-            int maxArgs = numberOfArgs(tokens);
-            printf("%d\n", maxArgs);
-            int largestToken = largestString(tokens);
-            int maxSize = strlen(pathName) + 1;
+            if (tempstatus != 1) {
+                // get arguments for pathName command to execute
+                int maxArgs = numberOfArgs(tokens);
+                printf("%d\n", maxArgs);
+                int largestToken = largestString(tokens);
+                int maxSize = strlen(pathName) + 1;
 
-            char** args1 = malloc((maxArgs+1) * sizeof(char*));
-            memset(args1, 0, maxArgs+1);
-            for (int i = 0; i < maxArgs+1; i++) {
-                args1[i] = malloc(largestToken + maxSize * sizeof(char));
-                memset(args1[i], 0, largestToken+maxSize);
+                char** args1 = malloc((maxArgs) * sizeof(char*));
+                memset(args1, 0, maxArgs);
+                for (int i = 0; i < maxArgs; i++) {
+                    args1[i] = malloc(largestToken + maxSize * sizeof(char));
+                    memset(args1[i], 0, largestToken+maxSize);
 
-            }
+                }
 
-            strcpy(args1[0], pathName);
-            args1[maxArgs] = (char*) NULL;
-            tokenptr++;
-            
+                strcpy(args1[0], pathName);
+                //char** tempptr = &(args1[maxArgs]);
+                //args1[maxArgs] = (char*) NULL;
+                tokenptr++;
+                
 
-            int oldinfd = -1;
-            int oldoutfd = -1;
-            for (int i = 1; i < maxArgs+1; i++) {
-                if (strcmp(*tokenptr, "") != 0) {
+                int oldinfd = -1;
+                int oldoutfd = -1;
+                int i = 1;
+                while (strcmp(*tokenptr, "") != 0) {
                     if (strcmp(*tokenptr, "<") == 0) {
+                        printf("found an input redirection\n");
                         ++tokenptr;
                         oldinfd = redirectionIn(*tokenptr);
-                        ++tokenptr;
+                        ++tokenptr;///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                         while (strcmp(*tokenptr, "") != 0) {
                             if (strcmp(*tokenptr, "<") == 0) {
                                 ++tokenptr;
@@ -639,8 +642,10 @@ int main(int argc, char** argv) {
                                 strcpy(args1[i], *tokenptr);
                                 //printf("%s\n", args1[i]);
                                 ++tokenptr;
+                                i++;
                             }
                         }
+                        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                     }
                     else if (strcmp(*tokenptr, ">") == 0) {
                         ++tokenptr;
@@ -655,52 +660,52 @@ int main(int argc, char** argv) {
                         if (strcmp(*tokenptr, "") != 0) strcpy(args1[i], *tokenptr);
                         //printf("%s\n", args1[i]);
                         ++tokenptr;
+                        i++;
                     }
-                    
                 }
-                //else args1[i] = (char*) NULL;
-            }
-            
-
-            
-            for (int i = 0; i < maxArgs; i++) {
-                printf("Arg1 pointer is %s\n", args1[i]);
-            }
-
-            int childStatus = executeProgram(pathName, args1);
-
-            if (oldinfd != -1) {
                 
-                dup2(oldinfd, 0);
-                close(oldinfd);
-            }
-            if (oldoutfd != -1) {
+
                 
-                dup2(oldoutfd, 1);
-                close(oldoutfd);
-            }
+                for (int i = 0; i < maxArgs; i++) {
+                    printf("Arg1 pointer is %s\n", args1[i]);
+                }
 
-            if (childStatus == 1) { //failed to execute
-                printf("Program %s could not be executed\n", pathName);
-                tempstatus = 1;
-            }
-            //else printf("program %s should have been executed\n", pathName);
+                int childStatus = executeProgram(pathName, args1);
 
-            //args1[maxArgs] = "";
-            //args1[maxArgs] = realloc(args1[maxArgs], (largestToken + maxSize) * sizeof(char));
-            //strcpy(args1[maxArgs], "");
-            /*for (int i = 0; i < largestToken + maxSize-1; i++) {
-                args1[maxArgs][i] = '0';
-            }*/
-            //args1[maxArgs][largestToken + maxSize-1] = '\0';
-            for (int i = 0; i < maxArgs + 1; i++) {
-                printf("We are freeing args1[%d], which contains %s\n", i, args1[i]);
-                free(args1[i]);
-            }
-            free(args1);
+                if (oldinfd != -1) {
+                    
+                    dup2(oldinfd, 0);
+                    close(oldinfd);
+                }
+                if (oldoutfd != -1) {
+                    
+                    dup2(oldoutfd, 1);
+                    close(oldoutfd);
+                }
 
-            if (slash != '/' && strcmp(pathName, "") != 0) {
-                free(pathName);
+                if (childStatus == 1) { //failed to execute
+                    printf("Program %s could not be executed\n", pathName);
+                    tempstatus = 1;
+                }
+                //else printf("program %s should have been executed\n", pathName);
+
+                //args1[maxArgs] = "";
+                //args1[maxArgs] = realloc(args1[maxArgs], (largestToken + maxSize) * sizeof(char));
+                //strcpy(args1[maxArgs], "");
+                /*for (int i = 0; i < largestToken + maxSize-1; i++) {
+                    args1[maxArgs][i] = '0';
+                }*/
+                //args1[maxArgs][largestToken + maxSize-1] = '\0';
+                for (int i = 0; i < maxArgs ; i++) {
+                    printf("We are freeing args1[%d], which contains %s\n", i, args1[i]);
+                    free(args1[i]);
+                }
+                free(args1);
+
+                if (slash != '/' && strcmp(pathName, "") != 0) {
+                    free(pathName);
+                }
+                //free(tempptr);
             }
         }
         
