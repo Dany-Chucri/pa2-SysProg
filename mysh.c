@@ -150,80 +150,50 @@ void personalStrCpy(char* destination, char* source, int sourceLength) {
     }
 }
 
-void concatTokenGlobs(char** tokens, char** globs, int globIndex) { //use gl_pathv for glob struct //returns size of new tokens array
-//printf("we are in concatglobs\n");
+char** concatTokenGlobs(char** tokens, int globIndex, char** globs, int* newBytes) {
+    //new number of tokens - 1st dimension
     int numTokens = numberOfTokens(tokens);
     int numGlobs = numberOfTokens(globs);
+    int newNumberOfTokens = numTokens + numGlobs - 1; //size of og tokens plus the matches, considering how the original wildcard will also be replaced (-1)
+    
+    //longest possible string length - 2nd dimension
     int newSize = largestString(tokens);
     if(largestString(globs) > newSize) newSize = largestString(globs);
-    newSize++; // for the \0
+    //newSize++;    MIGHT NEED TO ADD BACK
+    
+    //char** new = malloc(sizeof(char*) * newNumberOfTokens); //1st dimension
+    char** new = calloc(newNumberOfTokens+3, sizeof(char*));                    //////////////////try changing to +2 instead if needed, need to be this
+    *newBytes = newNumberOfTokens+3;
+    printf("%d\n", *newBytes);
+    for(int i = 0; i < newNumberOfTokens; i++) {
+        new[i] = calloc(newSize, sizeof(char));
+    }
+    
+    for(int i = 0; i < globIndex; i++) { //copies og tokens before the matches, stops at the og wildcard
+        strcpy(new[i], tokens[i]);
+    }
+    int globsPtr = 0;
+    for(int i = globIndex; i < globIndex+numGlobs; i++) { //replaces the og wildcard and fills in the rest of the matches
+        strcpy(new[i], globs[globsPtr]);
+        globsPtr++;
+    }
+    int ogPtr = globIndex + 1;
+    for(int i = globIndex+numGlobs; i < newNumberOfTokens; i++) {
+        strcpy(new[i], tokens[ogPtr]);
+        ogPtr++;
+    }
+    new[newNumberOfTokens] = ""; new[newNumberOfTokens+1] = ""; new[newNumberOfTokens+2] = "";
+    //new[newNumberOfTokens]
 
 
-    //tokens = realloc(tokens, sizeof(char*) * (numTokens+numGlobs)); //-1 because we need to replace the wildcard
-    //for (int i = 0; i < (numTokens+numGlobs-1); i++) {
-        //printf("%p\n", tokens[i]);
-        //tokens[i] = realloc(tokens[i], sizeof(char) * newSize); //reallocate space for new token lengths, must realloc entire array to avoid pointers crossing into wrong regions
-        //printf("%p\n", tokens[i]);
-    //}
-    /*
-    int looper1 = 0; 
-            while (strcmp(tokens[looper1], "") != 0) {
-                printf("%s\n", tokens[looper1]);
-                looper1++;
-            }
-    */
-    //printf("we are at check 1\n");
-    //numTokens = numberOfTokens(tokens);
-    //tokens[numTokens+numGlobs-1] =  "";
-    for(int i = (numTokens+numGlobs-1-1); i > globIndex; i--) { //had a -1 in first condition
-        //printf("%s\n", tokens[i - numGlobs+1]);
-        strcpy(tokens[i], tokens[i - numGlobs+1]); //tokens[i] = tokens[i - numGlobs+1];//tokens[i-1];    personalStrCpy(tokens[i], tokens[i - numGlobs+1], newSize); //  
-    }
-/*
-    for (int i = 0; i < numGlobs; i++) {
-        printf("%s ", globs[i]);
-    }
-        printf("\n");
-       */ //printf("GLOBIND:%d\n", globIndex);
-    int i = globIndex;
-    int j = 0;
-/*
-    for (int i = 0; i < (numTokens+numGlobs); i++) {        
-        printf("%s ", tokens[i]);
-    }
-*/
-//printf("\n");printf("\n");
-
-//printf("%p\n%p\n", tokens[i], tokens[i+1]);
-
-    while(i < globIndex + numGlobs) {
-        strcpy(tokens[i], globs[j]); //personalStrCpy(tokens[i], globs[j], strlen(globs[j]));//strcpy(tokens[i], globs[j]);
-        j++;   
-        i++;  
-    }
-/*
-    for (int i = 0; i < (numTokens+numGlobs); i++) {
-        printf("%s ", tokens[i]);
-    }
-        printf("\n");
-*/
-    /*
-    int looper2 = 0; 
-    while (strcmp(tokens[looper2], "") != 0) {
-        printf("%s\n", tokens[looper2]);
-        looper2++;
-    }
-    */
-   //printf("%p\n", tokens[0]);
-   //return (numTokens+numGlobs-1);
+    return new;
 }
 
-void wildcards(char** tokens, int tokenindex) { //returns the pathnames of files that are included in the wildcard
-    //char** globs;
-    //int num = 0;
-    glob_t gstruct;
-    int r = glob(tokens[tokenindex], GLOB_ERR, NULL, &gstruct); 
 
+char** wildcard(char** tokens, int globIndex, int ogTokenLength, int* newBytes){
+    glob_t globs;
+    //printf("%d\n", globIndex);
+    int r = glob(tokens[globIndex], GLOB_ERR, NULL, &globs); 
     if (r > 3) {//(r != 0 && r != 1) { //error check
         if(r == GLOB_NOMATCH) 
             fprintf(stderr, "No glob matches\n");
@@ -231,45 +201,21 @@ void wildcards(char** tokens, int tokenindex) { //returns the pathnames of files
             fprintf(stderr, "Glob Error");
         //exit(0);
     }
-  
-    //printf("Number of found filenames for %s: %zu\n", tokens[tokenindex], gstruct.gl_pathc);
-    //printf("%s\n", gstruct.gl_pathv[2]);
-    if (gstruct.gl_pathc > 0) {
-        char** globs = malloc(sizeof(char*) * (gstruct.gl_pathc+1));
-        memset(globs, (char) 0, (gstruct.gl_pathc+1));
-        gstruct.gl_pathv[gstruct.gl_pathc] =  "";
-        //largestString(gstruct.gl_pathv);
-        for(int i = 0; i < gstruct.gl_pathc; i++) {
-            globs[i] = malloc(sizeof(char) * largestString(gstruct.gl_pathv));
-            memset(globs[i], (char) 0, largestString(gstruct.gl_pathv));
-            strcpy(globs[i], gstruct.gl_pathv[i]);
-        }
-        //globs = gstruct.gl_pathv;
-        globs[gstruct.gl_pathc] =  "";
-        /*char** globsPtr = globs;
-        while(*globsPtr) {
-            printf("%s\n", *globsPtr);
-            globsPtr++;
-        }
-    */
+    if(globs.gl_pathc > 0) {
+        //printf("PASSSS\n");
+        globs.gl_pathv[globs.gl_pathc] = "";
+        char** eraser = tokens; // might not need
+        tokens = concatTokenGlobs(tokens, globIndex, globs.gl_pathv, newBytes);
 
-    /*
-        for(int i = 0; i < gstruct.gl_pathc; i++) {
-            printf("%s\n", globs[i]);
+        globfree(&globs); //free eraser and globs now
+        for(int i = 0; i < ogTokenLength; i++) {//numberOfTokens(eraser); i++) {
+            free(eraser[i]);
         }
-    */
+        free(eraser);
 
-        concatTokenGlobs(tokens, globs, tokenindex);//indexOfChar(tokens[tokenindex], '*'));
-        
-        
-        for(int i = 0; i < gstruct.gl_pathc; i++) {
-            free(globs[i]);
-        }
-        free(globs);
-        globfree(&gstruct);
-
+        //return new dimensions
     }
-    //return num; 
+    return tokens;
 }
 
 int redirectionIn(char* name) {
@@ -487,15 +433,14 @@ int main(int argc, char** argv) {
             looper++; 
         }
             //now look for * in tokens for wildcard replacement//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        tokens = &tokens[0];
-    //printf("%p      %p\n", tokens, tokens[0]);
+            int newBytes = 0;
+            //printf("");
             for(int i = 0; i < bytes; i++) {
-                //printf("%p      %p\n", tokens, tokens[0]);
                 if(indexOfChar(tokens[i], '*') != -1) {
-                    wildcards(tokens, i);
+                    tokens = wildcard(tokens, i, bytes, &newBytes);
+                    bytes = newBytes;
                     break;
                 }
-                //printf("%p\n", tokens);//printf("%p      %p\n", tokens, tokens[0]);
             }
         
         //TOKEN PRINT TESTING 2
